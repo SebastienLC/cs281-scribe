@@ -45,3 +45,5 @@ Lecture 19 - [Monte Carlo Basics](https://github.com/harvard-ml-courses/cs281-sc
 Lecture 20 - [Importance Sampling and Particle Filtering](https://github.com/harvard-ml-courses/cs281-scribe/blob/master/20/20/pdf)
 
 Lecture 21 - [Deep Learning in Health Care](https://github.com/harvard-ml-courses/cs281-scribe/blob/master/21/21.pdf)
+
+Lecture 22 - [MCMC and Boltzmann Machines](https://github.com/harvard-ml-courses/cs281-scribe/blob/master/22/22.pdf)
