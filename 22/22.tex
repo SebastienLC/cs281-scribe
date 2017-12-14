@@ -1,0 +1,255 @@
+\documentclass{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{../common}
+\usepackage{../pagesetup}
+
+\begin{document}
+
+\lecture{22}{November 27}{Sasha Rush}{Vasileios Nakos and Sebastien Lemieux-Codere}{MCMC and Boltzmann Machines }
+
+%\section{Monte Carlo Sampling}
+
+\subsection{The Restricted Boltzman Machine(RBM)}
+
+Restricted Boltzman Machine were used in the area of collaborative filtering. Many people thought they would be great for Deep Learning applications, but tend not to believe in it anymore. Restricted Boltzman Machine:
+
+\begin{itemize}
+    \item Are undirected graphical models. 
+    \item Have the structure of a bipartite graph.
+    \item Have binary random variables.
+\end{itemize}
+
+\begin{center}
+	\begin{tikzpicture}
+		\node[latent, scale=1.15]                                  (h1) {$h_{1}$};
+		\node[latent, right=of h1, scale=1.15]                     (h2) {$h_{2}$};
+
+		
+		\node[latent, right=of h2, scale=1.15]                     (ht) {$h_{t}$};
+
+		\node[latent, below=of h1, scale=1.15]                                  (v1) {$v_{1}$};
+		\node[latent, right=of v1, scale=1.15]                     (v2) {$v_{2}$};
+		\node[latent, right=of v2, scale=1.15]                     (v3) {$v_{3}$};
+
+				
+		\node[latent, right=of v3, scale=1.15]                     (vm) {$v_{m}$};
+
+
+		\edge [-] {h1} {v1} ;
+		\edge [-] {h1} {v2} ;
+		\edge [-] {h1} {v3} ;
+		\edge [-] {h1} {vm} ;
+		
+		\edge [-] {h2} {v1} ;
+		\edge [-] {h2} {v2} ;
+		\edge [-] {h2} {v3} ;
+		\edge [-] {h2} {vm} ;
+
+
+		\edge [-] {ht} {v1} ;
+		\edge [-] {ht} {v2} ;
+		\edge [-] {ht} {v3} ;
+		\edge [-] {ht} {vm} ;
+
+		\path (h2) -- node[auto=false]{\dots} (ht);
+		\path (v3) -- node[auto=false]{\dots} (vm);
+
+	\end{tikzpicture}
+\end{center}
+
+The join distribution of $v$ and $h$ is:
+
+    \[  \mathbb{P}[ v, h | \theta] = \frac{1}{Z(\theta)} \mathrm{exp} \left\{\sum_{i:h_i, j:v_j} \theta_{ij}(h_{i}v_j) \right\}.  \] 
+
+
+RBMs have been proven useful for the Netflix Grand prize; the interested reader can have a look at this \href{https://www.netflixprize.com/assets/GrandPrize2009_BPC_BigChaos.pdf}{paper} from Andreas Toscher and Michael Jahrer for more details. A natural question for this graphical model is whether we can do inference or not. There are no big cliques, but it's relatively densely connected. However, inference is hard! But... 
+\textbf{Inference is easier under conditioning!} For example, if we have observed all the $v$ nodes, we might be able to deduce the distribution on the $h$ nodes, by performing (roughly) logistic regression. For example, in the case of binary variables we have that:
+
+
+    \[  \mathbb{P}[ h | v , \theta] = \Pi_k \mathrm{Ber}(h_k|\mathrm{sigm}(w^T_{:,k}v),  \]
+and
+    \[  \mathbb{P}[ v | h , \theta] = \Pi_r \mathrm{Ber}(v_r|\mathrm{sigm}(w_{r,:},h),  \]
+
+where $w \in \mathbb{R}^{R \times K}$.  We can see that the above setup is very similar to a hidden layer in a neural network. This is the first time we see a connection between graphical models and a hidden layer. Upon conditioning on the $v$'s, h node probabilities are a neural network layer. One can have Deep Boltzmann Machines, in which higher layers capture complicated, higher-order relationships between the hidden features in the previous layer:
+
+\begin{center}
+	\begin{tikzpicture}
+		\node[latent, scale=1.15]                                  (h11) {$h_{21}$};
+		\node[latent, right=of h11, scale=1.15]                     (h12) {$h_{22}$};
+
+
+
+		\node[latent, below=of h11, scale=1.15]                                  (h21) {$h_{11}$};
+		\node[latent, right=of h21, scale=1.15]                     (h22) {$h_{12}$};
+		\node[latent, right=of h22, scale=1.15]                     (h23) {$h_{13}$};
+
+    
+		\node[latent, below=of h21, scale=1.15]                     (v1) {$v_{1}$};
+		\node[latent, right=of v1, scale=1.15]                     (v2) {$v_{2}$};
+		\node[latent, right=of v2, scale=1.15]                     (v3) {$v_{3}$};
+		
+		
+
+		\edge [-] {h11} {h21} ;
+		\edge [-] {h11} {h22} ;
+		\edge [-] {h11} {h23} ;
+
+		\edge [-] {h12} {h21} ;
+		\edge [-] {h12} {h22} ;
+		\edge [-] {h12} {h23} ;
+
+
+		
+		\edge [-] {h21} {v1} ;
+		\edge [-] {h21} {v2} ;
+		\edge [-] {h21} {v3} ;
+
+		\edge [-] {h22} {v1} ;
+		\edge [-] {h22} {v2} ;
+		\edge [-] {h22} {v3} ;
+
+
+		\edge [-] {h23} {v1} ;
+		\edge [-] {h23} {v2} ;
+		\edge [-] {h23} {v3} ;
+
+
+	\end{tikzpicture}
+\end{center}
+
+
+To perform the inference, we could use Lossy Belief Propagation (LBP), Mean Field (MF) or Expectation Mazimixation (EM).  In practice, it turns out that Gibbs sampling works well for Restricted Boltzman Machines when we observe $\mathbb{P}[h|v]$ or $\mathbb{P}[h|v]$. If we observe $p(h|v)$, we can compute $p(v|h)$ in the following way\smallskip \smallskip
+
+\begin{algorithmic}
+ \State $i=1$
+ \State Set initial $v^{(1)}$
+
+ \While{condition holds}
+    \State Compute $p(h|v^{(i)})$ (Neural Network Layer).
+    \State Sample each node to get $h^{(i)}$.
+    \State Compute $p(v|h^{(i)})$.
+    \State Sample each node to get $v^{(i+1)}$
+    \State $i=i+1$
+\EndWhile
+ \end{algorithmic} \smallskip
+
+Eventually, this process will reach an equilibrium and we can interpret new samples as coming from the joint distribution of $v$ and $h$. This is procedure is called Gibbs sampling, which is a type of Markov Chain Monte Carlo algorithm.
+
+\subsection{Markov Chain Monte Carlo (MCMC)}
+
+We are interested in computing $\mathbb{E}_{x \sim p} f(x)$, where $p$ is a distribution and $f$ is a function. Depending on what $p$ is, we might be able to do this with sampling methods already covered:
+\begin{enumerate}
+    \item Just sample from p
+    \item Use rejection Sampling. This would involve proposing $q(x)$ and a bound $M$ on the likelihood ratio $f(x)/q(x)$.
+    \item Use importance sampling    
+     \item Use particle filtering
+
+\end{enumerate}
+
+
+Another option is to use Markov Chain Monte Carlo (MCMC) methods, a class of algorithms for sampling from a probability distribution where we construct a Markov chain whose stationary distribution is the target density p(x). Gibbs sampling is a MCMC method applicable when the joint distribution is not known explicitly, but the conditional
+distribution of each variable is known. The Gibbs sampling algorithm is used to generate
+an instance from the distribution of each variable in turn, conditional on the current values of
+the other variables. Often it can be shown that the sequence of samples comprises a Markov chain, and
+the stationary distribution of that Markov chain is the sought-after joint distribution. 
+
+
+Example: Gibbs Sampling on RBM.
+\textbf{Trade-off}: Samples are now correlated, and hence we lose independence. On the other hand, we do not waste many samples in low probability events.
+
+\subsubsection{Markov Chains}
+
+Markov Chains are a sequence of a random variables $\{\pi\}_{i \in \mathbb{N}}$, which satisfy $\pi_{i+1} = T \pi_i$ and $\pi_0$ is given. $T$ is called the Transition Matrix and the $i,j$ entry $T(i|j)$ is  the probability to transition to state $i$ from state $j$. One can think of the Markov chain as starting from an initial distribution $\pi_0$ and applying the transition matrix $t$ times to arrive at distribution $\pi_{t} = T^t \pi_0$. 
+
+\begin{center}
+\begin{tikzpicture}
+
+\node[latent] (z_1) at  (0,5) {$\pi_0$};
+\node[latent] (z_2) at  (3,5) {$\pi_1$};
+\node[latent] (z_3) at  (6,5) {$\pi_2$};
+\node[latent] (z_4) at  (9,5) {$\pi_3$};
+
+\edge {z_1} {z_2};
+\edge {z_2} {z_3};
+\edge {z_3} {z_4};
+
+\end{tikzpicture}
+\end{center}
+
+\textbf{Key Definitions:}
+\begin{itemize}
+    \item  \textbf{Irreducibility}: It's possible to go from any state to any state. In other words, the probability of reaching any state starting from any other state is greater than 0.
+    
+    \item  \textbf{Aperiodicity}: We have aperiodicity if no state is periodic. A state is periodic with period $k>1$ if any return to that state from that state must occur in multiples of $k$ time steps. More formally, a state is aperiodic if  $\mathrm{gcd}\{n \in \mathbb{N}: \mathbb{P}(\pi_n =i | \pi_0 = i) > 0\} =1 $. 
+    
+    \item  \textbf{Positive recurrent}: A Markov chain is recurrent if the probability of eventually returning from every state to itself is 1. A Markov chain is positive recurrent if it is recurrent and the expected value of the number of steps before returning from every state to itself for the first time is finite.
+    
+    \item  \textbf{Ergodicity}: A Markov chain is ergodic if it is positive recurrent and aperiodic.
+
+    \item  \textbf{Stationary Distribution / Invariance}: A distribution $\pi^*$ is stationary (or invariant) if $ \pi^* = T \pi^*$. In the continuous case if $\pi^*(x') = \int T(x'|x) \pi^*(x) dx$. By definition, $\pi^*$ is an eigenvector with corresponding eigenvalue $\lambda = 1$.
+
+
+\end{itemize}
+
+
+\textbf{Key Theorems:}
+\begin{itemize}
+
+
+    \item \textbf{Uniqueness of Stationary Distribution}: If a finite state Markov chain is irreducible, aperiodic and has a stationary distribution, then (1) this stationary distribution is unique and (2) the Markov chain will asymptotically converge to that unique stationary distribution as $ t \rightarrow \infty$.
+
+    \item \textbf{Detailed Balance Condition}:  $\pi^*(x) T(x'|x) = \pi^*(x') T(x|x') $  implies that $\pi^*$ is a stationary distribution. It is a sufficient but not necessary condition for  $\pi^*$ to be a stationary distribution.
+    
+    \item \textbf{Convergence to a Unique Stationary Distribution}: If a Markov chain is irreducible and ergodic, then (1) it has a limiting distribution $\pi^*$ such that the Markov chain will converge to $\pi^*$ as $ t \rightarrow \infty$ regardless of the starting distribution, and (2) this limiting distribution is the Markov chain's unique stationary distribution. By definition, $\pi^*$ is an eigenvector with corresponding eigenvalue $\lambda = 1$. The rate of convergence is determined by the second largest eigenvalue.
+
+\end{itemize}
+
+If we ensure the detailed balance property, we can approximate the original distribution with a Markov chain.
+We do this by picking transition probability $T$ and its stationary distribution $\pi^*$ such that the above Detailed Balance condition holds and that $\pi^*$ approximates $p$. 
+Thus, asymptotically applying $T$ to get the next correlated sample yields samples of $\pi^*$ (assuming the Markov chain is irreducible and ergotic), which can be used as an approximation for $p$.  \smallskip  \smallskip
+
+\textbf{Properties}:  \smallskip
+\begin{itemize}
+    \item \emph{Expected Value}: \[ \mathbb{E}[ \frac{1}{N} \sum_{n=1}^N f(x_n)] = \frac{1}{N} \sum_{n=1}^N \mathbb{E}[f(x_n)] \sim  \frac{1}{N} \sum_{n=1}^N \int \pi^*(x) f(x) dx = \mathbb{E}_{x \sim \pi^*} f(x). \]
+    \item \emph{Variance}: \[\mathrm{Var}(1/N \sum f(x_n)) = \frac{1}{N^2} \mathrm{Var}( \sum f(x_n)) = \frac{1}{N^2} [\sum Var(f(x_n)) + 2 \sum_n \sum_{n'} \mathrm{cov}(f(x_n),f(x_{n'})].\] 
+\end{itemize}
+The first term in the variance is small for large N, while the second term is the additional variance from the correlation of sampling.
+
+\subsubsection{Metropolis-Hastings}
+
+The Metropolis–Hastings algorithm is a Markov chain Monte Carlo (MCMC) algorithm that was originally developed in the Manhattan project: we define a random walk that goes from $x$ to $x'$ with probability $q(x'|x)$. 
+$q(x'|x)$ is called the proposal distribution and it should have a non-zero probability for states that have non-zero probability in $p(x)$. A common proposal distribution is a Gaussian distribution centered at the last sample. The algorithm proceeds in the following way the get the (k+1)th sample: \smallskip
+
+\begin{algorithmic}
+ \While{condition holds}
+    \State Draw $x^*$ from $q(x^*|x^{(k)})$
+    \State Compute $A = min(1, \frac{p(x^*)q(x^{(k)}|x^*)}{p(x^{(k)}) q(x^*|x^{(k)})} )$
+    \State Set $x^{(k+1)} = x^* $ with probability A. Otherwise, we keep $x^{(k)}$ as the next sample: $x^{(k+1)} =x^{(k)} $.
+\EndWhile
+\end{algorithmic}
+
+Note that we only need to be able to compute $p(x)$ up to a multiplicative constant.  \smallskip  \smallskip
+ 
+The algorithm is designed such that $\pi^*(x)$ = $p(x)$.  Consider the case where $x \neq x'$. The detailed balance condition holds:
+
+    %$$  p(x) = \pi^*(x),$$
+    $$ T(x'|x) = q(x'|x) \cdot \mathrm{min}\{1,\frac{p(x')q(x|x')}{( p(x) q(x'|x)})$$
+and so   
+    \[  \pi^*(x) T(x'|x) = p(x) q(x'|x) \cdot \mathrm{min}\{1, \frac{p'(x) q(x|x')}{ ( p(x) q(x'|x))} \} = \mathrm{min}\{ p(x) q(x'|x), p(x') q(x|x') \}.\]
+    
+    In the above expression we have that the role of $x',x$ is symmetric and hence we get that 
+    
+        \[  \pi^*(x') T(x|x') = \mathrm{min}\{ p(x') q(x|x'), p(x) q(x'|x)\}, \]
+
+Since the detailed balance condition holds with $p(x) = \pi^*(x)$, $p(x)$ is a stationary distribution. Under the assumption that the Markov chain is ergodic and irreducible, $p(x)$ is the unique stationary distribution and the Markov chain will asymptotically converge to it regardless of the initial distribution. \smallskip \smallskip
+
+
+Gibbs sampling is a special case of Metropolis-Hastings.  It is equivalent to using Metropolis-Hastings with proposals of the form  $q(x'|x) = p(x_i'|x_{i-1}) \mathbb{I}[x_{-i}' = x_{-i}]$. The acceptance probability is then 1:
+
+    $$ \frac{p(x')}{p(x)}\frac{q(x|x')}{q(x'|x)} 
+    = \frac{p(x_i'| x_{-i}') p(x_{-i}')p(x_i|x_{-i}')}{p(x_i|x_{-i}) p(x_{-i}) p(x_i'|x_{-i})}
+    = 1.  $$
+    
+
+\end{document}
+
